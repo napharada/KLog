@@ -31,6 +31,11 @@ public class FileLog {
         }
     }
 
+    private static String getFileName() {
+        Random random = new Random();
+        return FILE_PREFIX + Long.toString(System.currentTimeMillis() + random.nextInt(10000)).substring(4) + FILE_FORMAT;
+    }
+
     private static boolean save(File dic, @NonNull String fileName, String msg) {
 
         File file = new File(dic, fileName);
@@ -56,11 +61,6 @@ public class FileLog {
             return false;
         }
 
-    }
-
-    private static String getFileName() {
-        Random random = new Random();
-        return FILE_PREFIX + Long.toString(System.currentTimeMillis() + random.nextInt(10000)).substring(4) + FILE_FORMAT;
     }
 
 }

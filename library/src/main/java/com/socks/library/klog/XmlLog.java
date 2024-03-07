@@ -2,7 +2,6 @@ package com.socks.library.klog;
 
 import android.util.Log;
 
-
 import com.socks.library.KLog;
 import com.socks.library.KLogUtil;
 

@@ -22,35 +22,31 @@ import java.io.StringWriter;
  * </ol>
  *
  * @author zhaokaiqiang
- *         github https://github.com/ZhaoKaiQiang/KLog
- *         15/11/17 扩展功能，添加对文件的支持
- *         15/11/18 扩展功能，增加对XML的支持，修复BUG
- *         15/12/8  扩展功能，添加对任意参数的支持
- *         15/12/11 扩展功能，增加对无限长字符串支持
- *         16/6/13  扩展功能，添加对自定义全局Tag的支持,修复内部类不能点击跳转的BUG
- *         16/6/15  扩展功能，添加不能关闭的KLog.debug(),用于发布版本的Log打印,优化部分代码
- *         16/6/20  扩展功能，添加堆栈跟踪功能KLog.trace()
+ * github https://github.com/ZhaoKaiQiang/KLog
+ * 15/11/17 扩展功能，添加对文件的支持
+ * 15/11/18 扩展功能，增加对XML的支持，修复BUG
+ * 15/12/8  扩展功能，添加对任意参数的支持
+ * 15/12/11 扩展功能，增加对无限长字符串支持
+ * 16/6/13  扩展功能，添加对自定义全局Tag的支持,修复内部类不能点击跳转的BUG
+ * 16/6/15  扩展功能，添加不能关闭的KLog.debug(),用于发布版本的Log打印,优化部分代码
+ * 16/6/20  扩展功能，添加堆栈跟踪功能KLog.trace()
  */
 public final class KLog {
 
     public static final String LINE_SEPARATOR = System.getProperty("line.separator");
     public static final String NULL_TIPS = "Log with null object";
-
-    private static final String DEFAULT_MESSAGE = "execute";
-    private static final String PARAM = "Param";
-    private static final String NULL = "null";
-    private static final String TAG_DEFAULT = "KLog";
-    private static final String SUFFIX = ".java";
-
     public static final int JSON_INDENT = 4;
-
     public static final int V = 0x1;
     public static final int D = 0x2;
     public static final int I = 0x3;
     public static final int W = 0x4;
     public static final int E = 0x5;
     public static final int A = 0x6;
-
+    private static final String DEFAULT_MESSAGE = "execute";
+    private static final String PARAM = "Param";
+    private static final String NULL = "null";
+    private static final String TAG_DEFAULT = "KLog";
+    private static final String SUFFIX = ".java";
     private static final int JSON = 0x7;
     private static final int XML = 0x8;
 
@@ -73,6 +69,94 @@ public final class KLog {
 
     public static void v() {
         printLog(V, null, DEFAULT_MESSAGE);
+    }
+
+    private static void printLog(int type, String tagStr, Object... objects) {
+
+        if (!IS_SHOW_LOG) {
+            return;
+        }
+
+        String[] contents = wrapperContent(STACK_TRACE_INDEX_5, tagStr, objects);
+        String tag = contents[0];
+        String msg = contents[1];
+        String headString = contents[2];
+
+        switch (type) {
+            case V:
+            case D:
+            case I:
+            case W:
+            case E:
+            case A:
+                BaseLog.printDefault(type, tag, headString + msg);
+                break;
+            case JSON:
+                JsonLog.printJson(tag, msg, headString);
+                break;
+            case XML:
+                XmlLog.printXml(tag, msg, headString);
+                break;
+        }
+
+    }
+
+    private static String[] wrapperContent(int stackTraceIndex, String tagStr, Object... objects) {
+
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+
+        StackTraceElement targetElement = stackTrace[stackTraceIndex];
+        String className = targetElement.getClassName();
+        String[] classNameInfo = className.split("\\.");
+        if (classNameInfo.length > 0) {
+            className = classNameInfo[classNameInfo.length - 1] + SUFFIX;
+        }
+
+        if (className.contains("$")) {
+            className = className.split("\\$")[0] + SUFFIX;
+        }
+
+        String methodName = targetElement.getMethodName();
+        int lineNumber = targetElement.getLineNumber();
+
+        if (lineNumber < 0) {
+            lineNumber = 0;
+        }
+
+        String tag = (tagStr == null ? className : tagStr);
+
+        if (mIsGlobalTagEmpty && TextUtils.isEmpty(tag)) {
+            tag = TAG_DEFAULT;
+        } else if (!mIsGlobalTagEmpty) {
+            tag = mGlobalTag;
+        }
+
+        String msg = (objects == null) ? NULL_TIPS : getObjectsString(objects);
+        String headString = "[ (" + className + ":" + lineNumber + ")#" + methodName + " ] ";
+
+        return new String[]{tag, msg, headString};
+    }
+
+    private static String getObjectsString(Object... objects) {
+
+        if (objects.length > 1) {
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append("\n");
+            for (int i = 0; i < objects.length; i++) {
+                Object object = objects[i];
+                if (object == null) {
+                    stringBuilder.append(PARAM).append("[").append(i).append("]").append(" = ").append(NULL).append("\n");
+                } else {
+                    stringBuilder.append(PARAM).append("[").append(i).append("]").append(" = ").append(object.toString()).append("\n");
+                }
+            }
+            return stringBuilder.toString();
+        } else if (objects.length == 1) {
+            Object object = objects[0];
+            return object == null ? NULL : object.toString();
+        } else {
+            return NULL;
+        }
     }
 
     public static void v(Object msg) {
@@ -163,6 +247,20 @@ public final class KLog {
         printFile(null, targetDirectory, null, msg);
     }
 
+    private static void printFile(String tagStr, File targetDirectory, String fileName, Object objectMsg) {
+
+        if (!IS_SHOW_LOG) {
+            return;
+        }
+
+        String[] contents = wrapperContent(STACK_TRACE_INDEX_5, tagStr, objectMsg);
+        String tag = contents[0];
+        String msg = contents[1];
+        String headString = contents[2];
+
+        FileLog.printFile(tag, targetDirectory, fileName, headString, msg);
+    }
+
     public static void file(String tag, File targetDirectory, Object msg) {
         printFile(tag, targetDirectory, null, msg);
     }
@@ -173,6 +271,14 @@ public final class KLog {
 
     public static void debug() {
         printDebug(null, DEFAULT_MESSAGE);
+    }
+
+    private static void printDebug(String tagStr, Object... objects) {
+        String[] contents = wrapperContent(STACK_TRACE_INDEX_5, tagStr, objects);
+        String tag = contents[0];
+        String msg = contents[1];
+        String headString = contents[2];
+        BaseLog.printDefault(D, tag, headString + msg);
     }
 
     public static void debug(Object msg) {
@@ -214,117 +320,6 @@ public final class KLog {
         String msg = contents[1];
         String headString = contents[2];
         BaseLog.printDefault(D, tag, headString + msg);
-    }
-
-    private static void printLog(int type, String tagStr, Object... objects) {
-
-        if (!IS_SHOW_LOG) {
-            return;
-        }
-
-        String[] contents = wrapperContent(STACK_TRACE_INDEX_5, tagStr, objects);
-        String tag = contents[0];
-        String msg = contents[1];
-        String headString = contents[2];
-
-        switch (type) {
-            case V:
-            case D:
-            case I:
-            case W:
-            case E:
-            case A:
-                BaseLog.printDefault(type, tag, headString + msg);
-                break;
-            case JSON:
-                JsonLog.printJson(tag, msg, headString);
-                break;
-            case XML:
-                XmlLog.printXml(tag, msg, headString);
-                break;
-        }
-
-    }
-
-    private static void printDebug(String tagStr, Object... objects) {
-        String[] contents = wrapperContent(STACK_TRACE_INDEX_5, tagStr, objects);
-        String tag = contents[0];
-        String msg = contents[1];
-        String headString = contents[2];
-        BaseLog.printDefault(D, tag, headString + msg);
-    }
-
-
-    private static void printFile(String tagStr, File targetDirectory, String fileName, Object objectMsg) {
-
-        if (!IS_SHOW_LOG) {
-            return;
-        }
-
-        String[] contents = wrapperContent(STACK_TRACE_INDEX_5, tagStr, objectMsg);
-        String tag = contents[0];
-        String msg = contents[1];
-        String headString = contents[2];
-
-        FileLog.printFile(tag, targetDirectory, fileName, headString, msg);
-    }
-
-    private static String[] wrapperContent(int stackTraceIndex, String tagStr, Object... objects) {
-
-        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-
-        StackTraceElement targetElement = stackTrace[stackTraceIndex];
-        String className = targetElement.getClassName();
-        String[] classNameInfo = className.split("\\.");
-        if (classNameInfo.length > 0) {
-            className = classNameInfo[classNameInfo.length - 1] + SUFFIX;
-        }
-
-        if (className.contains("$")) {
-            className = className.split("\\$")[0] + SUFFIX;
-        }
-
-        String methodName = targetElement.getMethodName();
-        int lineNumber = targetElement.getLineNumber();
-
-        if (lineNumber < 0) {
-            lineNumber = 0;
-        }
-
-        String tag = (tagStr == null ? className : tagStr);
-
-        if (mIsGlobalTagEmpty && TextUtils.isEmpty(tag)) {
-            tag = TAG_DEFAULT;
-        } else if (!mIsGlobalTagEmpty) {
-            tag = mGlobalTag;
-        }
-
-        String msg = (objects == null) ? NULL_TIPS : getObjectsString(objects);
-        String headString = "[ (" + className + ":" + lineNumber + ")#" + methodName + " ] ";
-
-        return new String[]{tag, msg, headString};
-    }
-
-    private static String getObjectsString(Object... objects) {
-
-        if (objects.length > 1) {
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("\n");
-            for (int i = 0; i < objects.length; i++) {
-                Object object = objects[i];
-                if (object == null) {
-                    stringBuilder.append(PARAM).append("[").append(i).append("]").append(" = ").append(NULL).append("\n");
-                } else {
-                    stringBuilder.append(PARAM).append("[").append(i).append("]").append(" = ").append(object.toString()).append("\n");
-                }
-            }
-            return stringBuilder.toString();
-        } else if (objects.length == 1){
-            Object object = objects[0];
-            return object == null ? NULL : object.toString();
-        } else {
-            return NULL;
-        }
     }
 
 }

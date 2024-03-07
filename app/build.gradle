@@ -1,18 +1,18 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.3"
-
+    namespace 'com.socks.sample'
+    compileSdk 34
     defaultConfig {
-        applicationId "com.socks.klog.sample"
-        minSdkVersion 8
-        targetSdkVersion 23
+        applicationId "com.socks.sample"
+        minSdkVersion 24
+        targetSdkVersion 34
         versionCode 1
         versionName "1.0"
     }
-    buildTypes {
 
+    buildTypes {
+        android.buildFeatures.buildConfig true
         debug {
             buildConfigField "boolean", "LOG_DEBUG", "true"
             minifyEnabled false
@@ -29,9 +29,10 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:appcompat-v7:23.4.0'
-    compile 'com.loopj.android:android-async-http:1.4.9'
-    compile 'cz.msebera.android:httpclient:4.3.6'
-    compile 'com.github.zhaokaiqiang.klog:library:1.6.0'
-//    compile project(':library')
+
+    implementation project(':library')
+
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+    implementation 'com.loopj.android:android-async-http:1.4.9'
+    implementation 'cz.msebera.android:httpclient:4.3.6'
 }

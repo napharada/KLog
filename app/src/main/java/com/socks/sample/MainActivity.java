@@ -1,16 +1,15 @@
 package com.socks.sample;
 
-import android.content.Intent;
+import android.annotation.SuppressLint;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 
 import com.loopj.android.http.AsyncHttpClient;
@@ -24,19 +23,19 @@ public class MainActivity extends AppCompatActivity {
     private static final String LOG_MSG = "KLog is a so cool Log Tool!";
     private static final String TAG = "KLog";
     private static final String URL_XML = "https://raw.githubusercontent.com/ZhaoKaiQiang/KLog/master/app/src/main/AndroidManifest.xml";
-    private static String XML = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><!--  Copyright w3school.com.cn --><note><to>George</to><from>John</from><heading>Reminder</heading><body>Don't forget the meeting!</body></note>";
+    private static final String XML = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><!--  Copyright w3school.com.cn --><note><to>George</to><from>John</from><heading>Reminder</heading><body>Don't forget the meeting!</body></note>";
     private static String JSON;
     private static String JSON_LONG;
     private static String STRING_LONG;
-    private AsyncHttpClient httpClient;
-
-    private static Handler handler = new Handler() {
+    @SuppressLint("HandlerLeak")
+    private static final Handler handler = new Handler() {
 
         @Override
-        public void handleMessage(Message msg) {
+        public void handleMessage(@NonNull Message msg) {
             KLog.d("Inner Class Test");
         }
     };
+    private AsyncHttpClient httpClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -172,20 +171,4 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_about, menu);
         return true;
     }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-
-        switch (item.getItemId()) {
-            case R.id.action_github:
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ZhaoKaiQiang/KLog")));
-                break;
-            case R.id.action_blog:
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://blog.csdn.net/zhaokaiqiang1992")));
-                break;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
 }
